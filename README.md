@@ -11,6 +11,16 @@ Multi-agent pipeline orchestration for Claude Code. Compose agents into phased w
 - **Persists all artifacts** in session directories for auditability
 - **Coexists with taskmaster** — stop hook only activates during active pipelines
 
+## Installation
+
+```bash
+git clone https://github.com/jlibr/orchestrator.git
+cd orchestrator
+bash install.sh
+```
+
+This copies the plugin to `~/.claude/plugins/orchestrator/` and registers `/pipe`, `/pipe-status`, and `/pipe-cancel` as commands.
+
 ## Quick Start
 
 Just describe what you want to build:
