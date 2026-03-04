@@ -1,0 +1,8 @@
+{
+  "name": "orchestrator",
+  "version": "1.0.0",
+  "description": "Multi-agent pipeline orchestration. Provides session management, iteration control, artifact chains, and issue bus for composing agents into multi-phase workflows. Use /pipe to run a pipeline.",
+  "author": {
+    "name": "jlibr"
+  }
+}

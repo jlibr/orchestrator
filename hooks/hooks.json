@@ -1,0 +1,28 @@
+{
+  "description": "Pipeline iteration control and agent boundary enforcement.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/stop-hook.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/guard-state.sh\" \"$TOOL_INPUT\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+# Pipeline Configuration Template
+# Copy to your project root as pipeline.yaml and customize.
+
+name: my-project
+description: "Brief description of what this pipeline builds"
+type: build                     # build (one-shot) | session (repeated per interaction)
+max_cycles: 3                   # Max review-rebuild iterations
+max_retries: 2                  # Max retries per agent on failure
+max_duration: 60                # Wall-clock timeout in minutes (default 60)
+# max_tokens: 500000            # Optional token budget — warns user when exceeded
+
+# Phase definitions — executed in order
+phases:
+  - id: explore
+    description: "Discover codebase structure, patterns, and integration points"
+    agents:
+      - agent: pipe-explorer
+        model: sonnet
+    output: context/
+
+  - id: research
+    description: "Evaluate existing solutions before building"
+    agents:
+      - agent: pipe-researcher
+        model: haiku
+        depends_on: [explore]
+    output: context/
+    # skip_if: "greenfield"     # Uncomment to skip for new projects
+
+  - id: build
+    description: "Implement the spec"
+    agents:
+      # Replace with your domain agents:
+      - agent: my-builder
+        model: sonnet
+        depends_on: [explore]
+        output: artifacts/build/
+      # Add parallel agents:
+      # - agent: my-other-builder
+      #   model: sonnet
+      #   parallel_with: my-builder
+      #   output: artifacts/other/
+    gate:
+      agent: pipe-reviewer
+      model: inherit
+      pass_threshold: "PASS"
+      fail_action: retry        # retry | stop | skip
+      max_gate_cycles: 2
+
+  # - id: test
+  #   description: "Run integration tests"
+  #   agents:
+  #     - agent: my-tester
+  #       model: haiku
+  #       depends_on: [build]
+  #   output: artifacts/tests/
+
+  # - id: deploy
+  #   description: "Deploy the build"
+  #   agents:
+  #     - agent: my-deployer
+  #       model: haiku
+  #       depends_on: [build]
+  #       requires_approval: true
+  #   output: artifacts/deployment/
+
+# Model routing — override per-agent model for cost optimization
+# model_routing:
+#   haiku: [lightweight-agent]
+#   sonnet: [complex-agent]
+
+# Issue bus config
+issue_bus:
+  enabled: true
+  max_redispatch: 2
+  types:
+    - MISMATCH
+    - MISSING
+    - CONFLICT
+
+# Artifact conventions
+# {session} is replaced at runtime by the orchestrator — do not change this pattern
+artifacts:
+  base_dir: .claude/pipeline/sessions/{session}/artifacts/
