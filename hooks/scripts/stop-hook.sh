@@ -76,11 +76,11 @@ if [[ -d "$REVIEWS_DIR" ]]; then
   fi
 fi
 
-# No review exists yet — pipeline is mid-build (exploring, building, specifying).
+# No review exists yet — pipeline is mid-execution (exploring, designing, building, testing, etc.).
 # Block exit so the orchestrator can continue dispatching work.
 # Do NOT increment cycle — cycle only increments after a review FAIL.
 case "$STATUS" in
-  exploring|building|reviewing|specifying|generating)
+  exploring|designing|building|testing|reviewing|specifying|generating)
     echo "PIPELINE: Active (status: $STATUS). Continuing."
     exit 2
     ;;

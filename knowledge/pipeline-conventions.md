@@ -22,6 +22,8 @@ Standard formats for artifacts, issue bus entries, state management, and review 
         ├── knowledge/                  # Auto-generated knowledge slices (Mode 1)
         │   └── {domain}.md            # Domain rules, patterns, references
         ├── artifacts/
+        │   ├── design/                # ui-architect output (design-spec.md)
+        │   ├── qa/                    # qa-tester output (test-report.md, screenshots/, videos/)
         │   ├── {agent-id}/            # Per-agent output directories
         │   └── issues/                # Cross-agent issue files
         ├── reviews/
@@ -34,7 +36,7 @@ Standard formats for artifacts, issue bus entries, state management, and review 
 ## State File Format (`state.yaml`)
 
 ```yaml
-status: idle                    # idle | specifying | exploring | generating | building | reviewing | done | failed | cancelled
+status: idle                    # idle | specifying | exploring | designing | generating | building | testing | reviewing | done | failed | cancelled
 session_name: my-session
 pipeline_config: ./pipeline.yaml  # Set at setup (Mode 2) or after auto-gen (Mode 1)
 cycle: 0                        # Current review cycle (0 = first build)
@@ -100,18 +102,19 @@ Written after every phase transition. Read by `/pipe resume` for rich context be
 ### Status Transitions
 
 ```
-idle → specifying → exploring → generating → building → reviewing → done
-                                                ↑            |
-                                                └── (FAIL) ──┘  (cycle < max_cycles)
-                                                             |
-                                                             └── done (cycle >= max_cycles OR PASS)
+idle → specifying → exploring → designing → generating → building → testing → reviewing → done
+                                                           ↑                      |
+                                                           └──── (FAIL) ──────────┘  (cycle < max_cycles)
+                                                                                  |
+                                                                                  └── done (cycle >= max_cycles OR PASS)
 
 Any state → cancelled (user cancellation)
 Any state → failed (unrecoverable error)
+
+Note: designing and testing are optional — skipped when not applicable (e.g., backend-only pipelines skip designing, non-web pipelines skip testing).
 ```
 
-**`status` vs `current_phase`:** `status` is the broad pipeline mode (what the stop hook checks). `current_phase` is the granular phase ID from the pipeline config (e.g., `explore`, `build`, `test`). Both exist in state.yaml. `status` controls iteration logic; `current_phase` tracks progress within phases.
-```
+**`status` vs `current_phase`:** `status` is the broad pipeline mode (what the stop hook checks). `current_phase` is the granular phase ID from the pipeline config (e.g., `explore`, `design`, `build`, `test`). Both exist in state.yaml. `status` controls iteration logic; `current_phase` tracks progress within phases.
 
 ## Issue Bus Format
 
@@ -141,6 +144,7 @@ created: 2026-03-04
 - **MISMATCH** — Two agents produced incompatible outputs (e.g., API contract mismatch)
 - **MISSING** — Required output from one agent is absent
 - **CONFLICT** — Two agents modified the same file or resource
+- **DESIGN_DEVIATION** — Implementation doesn't match the design spec (ui-builder vs ui-architect)
 
 Projects can define additional types in `pipeline.yaml` under `issue_bus.types`.
 

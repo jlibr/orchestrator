@@ -58,7 +58,8 @@ if [[ -n "$PIPELINE_CONFIG" && -f "$PIPELINE_CONFIG" ]]; then
 fi
 
 # Create session directories — includes agents/ and knowledge/ for auto-generation
-mkdir -p "$SESSION_DIR"/{spec,context,artifacts/issues,reviews,agents,knowledge}
+# design/ and qa/ are for standing agents (ui-architect, qa-tester)
+mkdir -p "$SESSION_DIR"/{spec,context,artifacts/{issues,design,qa/screenshots,qa/videos},reviews,agents,knowledge}
 
 # Handle worktree creation
 WORKTREE_PATH=""

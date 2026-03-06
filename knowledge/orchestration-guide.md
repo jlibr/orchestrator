@@ -86,11 +86,43 @@ model_routing:
   sonnet: [complex-agent-1]
 ```
 
+## Standing Agents (Built-in)
+
+The plugin includes 11 standing agents that are reusable across any project:
+
+**Infrastructure agents** (used in every pipeline):
+
+| Agent | Phase | Role |
+|-------|-------|------|
+| `pipe-explorer` | Explore | Codebase discovery and context mapping |
+| `pipe-researcher` | Explore (background) | Build-vs-buy analysis, web research |
+| `pipe-reviewer` | Review | Quality gate, PASS/FAIL verdicts |
+
+**Specialized build agents** (used when applicable):
+
+| Agent | Phase | Role |
+|-------|-------|------|
+| `ui-architect` | Design | Design research, visual spec, component patterns |
+| `ui-builder` | Build | Frontend implementation from design spec |
+
+**QA agents** (used in test/QA sweep phases):
+
+| Agent | Phase | Role | Model |
+|-------|-------|------|-------|
+| `qa-tester` | Test | Automated e2e testing via browser automation | sonnet |
+| `qa-design` | QA Sweep | Design spec compliance — color tokens, spacing, radius, typography | sonnet |
+| `qa-ux` | QA Sweep | UX heuristics — empty/error/loading states, responsive, touch targets | sonnet |
+| `qa-security` | QA Sweep | Auth, API key exposure, XSS, CSRF, Supabase RLS, env vars | sonnet |
+| `qa-content` | QA Sweep | Microcopy, placeholder text, error messages, grammar, terminology | haiku |
+| `qa-accessibility` | QA Sweep | WCAG 2.1 AA — contrast, focus, keyboard nav, ARIA, semantic HTML | sonnet |
+
+Standing agents are dispatched by the orchestrator when needed. Build agents are optional — only used when the pipeline has frontend/UI work. QA agents run in the test/QA sweep phase after builds complete. They can run in parallel and produce independent reports.
+
 ## Domain Agents
 
 Domain agents are the workers that do project-specific tasks.
 
-**Mode 1 (auto):** The orchestrator generates domain agents automatically in Phase 4 based on the spec and codebase context. They're written to `.claude/pipeline/sessions/{session}/agents/`. You approve them before the build starts.
+**Mode 1 (auto):** The orchestrator generates domain agents automatically in Phase 4 based on the spec and codebase context. They're written to `.claude/pipeline/sessions/{session}/agents/`. Standing agents (above) are NOT regenerated — only project-specific roles get new agents.
 
 **Mode 2 (manual):** Create agents yourself using `templates/domain-agent.md`. Place in the project's `.claude/agents/` or wherever your pipeline config references them.
 

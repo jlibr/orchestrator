@@ -1,0 +1,6 @@
+# Project-specific learning files (generated during pipeline runs)
+learning/*.md
+!learning/.gitkeep
+
+# Pipeline session state (generated at runtime)
+.claude/pipeline/

@@ -69,6 +69,23 @@ Agent(pipe-researcher, background): "Research solutions for {specific need}. Ses
 
 Update state: `current_phase: explore`
 
+### Phase 3.5: Design (Optional — when UI/UX work is needed)
+
+If the spec includes frontend, UI, or visual design work, launch the `ui-architect` standing agent:
+
+```
+Agent(ui-architect, max_turns: 30): "Design system and page-by-page spec for session {session}. Read spec from .claude/pipeline/sessions/{session}/spec/. Read codebase context from .claude/pipeline/sessions/{session}/context/context.md. Use https://component.gallery/ for component research. Write design spec to .claude/pipeline/sessions/{session}/artifacts/design/design-spec.md and knowledge slice to .claude/pipeline/sessions/{session}/knowledge/design-system.md"
+```
+
+**Skip condition:** If the pipeline is backend-only, API-only, or the spec has no visual/frontend component, skip this phase entirely.
+
+After ui-architect completes:
+- Read the design spec summary (don't hold the full doc in context — extract key decisions)
+- Show the user a summary: color palette, font choices, component count, pages specified
+- Wait for user approval before proceeding
+
+Update state: `status: designing`, `current_phase: design`
+
 ### Phase 4: Generate Pipeline Infrastructure (Auto)
 
 After Explore completes, you have the spec (requirements, design, tasks) AND the codebase context. Use both to auto-generate the pipeline infrastructure the build needs.
@@ -91,10 +108,17 @@ If no matches, proceed with fresh generation. Note in the session log that no pr
 Read `spec/design.md` and `spec/tasks.md`. Identify the distinct agent roles needed. Common patterns:
 - Frontend + backend split → 2 build agents
 - Single app → 1 build agent
+- Frontend with design spec → use standing `ui-builder` agent (already exists, no generation needed)
 - App + tests → builder + test-writer
 - Multi-service → 1 agent per service
 
-Keep it minimal. Prefer fewer agents with broader scope over many narrow ones.
+**Standing agents that DON'T need generation** (already exist in the plugin):
+- `ui-architect` — design research and specification (used in Phase 3.5)
+- `ui-builder` — frontend implementation from design spec (use in Build phase for UI work)
+- `qa-tester` — automated e2e testing via browser automation (use in Test phase)
+- `pipe-explorer`, `pipe-researcher`, `pipe-reviewer` — infrastructure agents
+
+Only generate domain agents for roles NOT covered by standing agents. Keep it minimal.
 
 **Step 2: Generate domain agents.**
 For each role, create an agent `.md` file at `.claude/pipeline/sessions/{session}/agents/{project}-{role}.md` (setup script pre-creates this directory) using the `domain-agent.md` template from `${CLAUDE_PLUGIN_ROOT}/templates/`. Fill in:
@@ -121,10 +145,12 @@ Only create slices when there's genuine domain knowledge to encode. Don't create
 **Step 4: Generate pipeline.yaml and update state.**
 Create `.claude/pipeline/sessions/{session}/pipeline.yaml` with:
 - `name` from session name
-- `phases` — explore (done), build (with generated agents), review (pipe-reviewer)
+- `phases` — explore (done), design (if applicable, done), build (with generated + standing agents), test (qa-tester if applicable), review (pipe-reviewer)
 - `model_routing` — assign models based on agent complexity
 - `issue_bus` — enable with project-relevant issue types
 - `gate` on build phase using pipe-reviewer
+
+Include the `ui-builder` standing agent in the build phase if a design spec exists. Include `qa-tester` in a test phase if the pipeline builds a web application with a deployed URL.
 
 After writing the config, update `state.yaml`:
 - Set `pipeline_config` to the generated config path
@@ -166,6 +192,55 @@ For each build agent:
 Update state: `current_phase: build`, `agent_status: {agent: running}`
 
 As agents complete, update their status to `success` or `failed`.
+
+### Phase 5.5: Test (Optional — when a testable web app exists)
+
+If the pipeline builds a web application AND it's deployed (localhost or production URL), launch the `qa-tester` standing agent:
+
+```
+Agent(qa-tester, max_turns: 30): "Test the web application for session {session}. URL: {TARGET_URL}. Read spec from .claude/pipeline/sessions/{session}/spec/. Read design spec from .claude/pipeline/sessions/{session}/artifacts/design/design-spec.md if it exists. Write test report to .claude/pipeline/sessions/{session}/artifacts/qa/test-report.md"
+```
+
+**Skip condition:** If the pipeline doesn't produce a deployable web app, or the user hasn't provided a URL, skip this phase. Ask the user for the URL if the app was just built and needs to be started.
+
+After qa-tester completes:
+- Read the test report summary (issue count, severity breakdown)
+- Route CRITICAL/MAJOR findings to the appropriate build agent (ui-builder for visual issues, domain agents for functional issues)
+- If issues found, this feeds into the Review phase — the reviewer sees both the test report and the code
+
+Update state: `status: testing`, `current_phase: test`
+
+### Phase 5.6: QA Sweep (Optional — comprehensive multi-agent audit)
+
+If the pipeline config includes a `qa-sweep` phase, or the user requests comprehensive QA, launch multiple QA agents in parallel. Each agent produces an independent report.
+
+**Available QA agents** (all standing agents — no generation needed):
+
+| Agent | What it checks | Output |
+|-------|---------------|--------|
+| `qa-design` | Design spec compliance — tokens, spacing, radius, typography, component structure | `artifacts/qa/design-compliance.md` |
+| `qa-ux` | UX heuristics — empty/loading/error states, responsive breakpoints, touch targets, flow coherence | `artifacts/qa/ux-report.md` |
+| `qa-security` | Auth middleware, API key exposure, XSS vectors, CSRF, Supabase RLS, env vars | `artifacts/qa/security-report.md` |
+| `qa-content` | Microcopy quality — placeholders, error messages, button labels, grammar, terminology consistency | `artifacts/qa/content-report.md` |
+| `qa-accessibility` | WCAG 2.1 AA — contrast ratios, focus rings, keyboard nav, ARIA attributes, semantic HTML | `artifacts/qa/accessibility-report.md` |
+
+**Dispatch pattern:**
+```
+# Launch all 5 in parallel
+Agent(qa-design, max_turns: 20): "Audit design compliance for session {session}..."
+Agent(qa-ux, max_turns: 25): "Audit UX for session {session}..."
+Agent(qa-security, max_turns: 20): "Security review for session {session}..."
+Agent(qa-content, max_turns: 15, model: haiku): "Content audit for session {session}..."
+Agent(qa-accessibility, max_turns: 20): "Accessibility audit for session {session}..."
+```
+
+After all agents complete:
+- Read each report's Summary section (finding counts by severity)
+- Aggregate into a single QA summary for the reviewer
+- Route CRITICAL/MAJOR findings via the issue bus to the appropriate build agent
+- This feeds into Phase 6 (Review) — the reviewer sees all QA reports
+
+Update state: `status: qa-sweep`, `current_phase: qa-sweep`
 
 ### Phase 6: Review (Quality Gate)
 
@@ -255,8 +330,10 @@ When input is `resume`:
 4. Jump to the appropriate phase based on `status`:
    - `specifying` → Phase 1 (Challenge)
    - `exploring` → Phase 3 (Explore)
+   - `designing` → Phase 3.5 (Design)
    - `generating` → Phase 4 (Generate)
    - `building` → Phase 5 (Build) — re-read spec, context, and latest review findings
+   - `testing` → Phase 5.5 (Test)
    - `reviewing` → Phase 6 (Review)
 5. Continue execution normally from that point.
 

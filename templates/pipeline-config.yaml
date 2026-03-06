@@ -27,6 +27,15 @@ phases:
     output: context/
     # skip_if: "greenfield"     # Uncomment to skip for new projects
 
+  # Uncomment for projects with UI/frontend work:
+  # - id: design
+  #   description: "Research visual references and produce design specification"
+  #   agents:
+  #     - agent: ui-architect
+  #       model: sonnet
+  #       depends_on: [explore]
+  #   output: artifacts/design/
+
   - id: build
     description: "Implement the spec"
     agents:
@@ -47,13 +56,49 @@ phases:
       fail_action: retry        # retry | stop | skip
       max_gate_cycles: 2
 
+  # Uncomment for web apps with a deployed URL:
   # - id: test
-  #   description: "Run integration tests"
+  #   description: "Automated e2e testing via browser automation"
   #   agents:
-  #     - agent: my-tester
-  #       model: haiku
+  #     - agent: qa-tester
+  #       model: sonnet
   #       depends_on: [build]
-  #   output: artifacts/tests/
+  #   output: artifacts/qa/
+
+  # Uncomment for comprehensive QA sweep (runs agents in parallel):
+  # - id: qa-sweep
+  #   description: "Multi-agent QA audit — design, UX, security, content, accessibility"
+  #   agents:
+  #     - agent: qa-design
+  #       model: sonnet
+  #       depends_on: [build]
+  #       output: artifacts/qa/
+  #     - agent: qa-ux
+  #       model: sonnet
+  #       parallel_with: qa-design
+  #       depends_on: [build]
+  #       output: artifacts/qa/
+  #     - agent: qa-security
+  #       model: sonnet
+  #       parallel_with: qa-design
+  #       depends_on: [build]
+  #       output: artifacts/qa/
+  #     - agent: qa-content
+  #       model: haiku
+  #       parallel_with: qa-design
+  #       depends_on: [build]
+  #       output: artifacts/qa/
+  #     - agent: qa-accessibility
+  #       model: sonnet
+  #       parallel_with: qa-design
+  #       depends_on: [build]
+  #       output: artifacts/qa/
+  #   gate:
+  #     agent: pipe-reviewer
+  #     model: inherit
+  #     pass_threshold: "PASS"
+  #     fail_action: retry
+  #     max_gate_cycles: 3
 
   # - id: deploy
   #   description: "Deploy the build"
@@ -77,6 +122,7 @@ issue_bus:
     - MISMATCH
     - MISSING
     - CONFLICT
+    - DESIGN_DEVIATION       # ui-builder output doesn't match ui-architect spec
 
 # Artifact conventions
 # {session} is replaced at runtime by the orchestrator — do not change this pattern

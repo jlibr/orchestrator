@@ -55,11 +55,31 @@ The orchestrator handles everything:
 
 ## Built-in Agents
 
+**Infrastructure agents** (used in every pipeline):
+
 | Agent | Role | Model |
 |-------|------|-------|
 | `pipe-explorer` | Codebase discovery and context mapping | sonnet |
 | `pipe-researcher` | Build-vs-buy analysis, web research | haiku |
 | `pipe-reviewer` | Quality review, PASS/FAIL verdicts | inherit |
+
+**Specialized build agents** (used when applicable):
+
+| Agent | Role | Model |
+|-------|------|-------|
+| `ui-architect` | Design research, visual spec, component patterns | sonnet |
+| `ui-builder` | Frontend implementation from design spec | sonnet |
+
+**QA agents** (used in test/QA sweep phases):
+
+| Agent | Role | Model |
+|-------|------|-------|
+| `qa-tester` | Automated e2e testing via browser automation | sonnet |
+| `qa-design` | Design spec compliance — tokens, spacing, typography | sonnet |
+| `qa-ux` | UX heuristics — states, responsive, touch targets | sonnet |
+| `qa-security` | Auth, XSS, CSRF, RLS, env vars | sonnet |
+| `qa-content` | Microcopy, placeholders, grammar, terminology | haiku |
+| `qa-accessibility` | WCAG 2.1 AA — contrast, focus, ARIA, keyboard nav | sonnet |
 
 ## Architecture
 
@@ -69,8 +89,10 @@ The orchestrator handles everything:
     ├── Phase 1: Challenge (5 gates with user)
     ├── Phase 2: Specify (requirements, design, tasks)
     ├── Phase 3: Explore (codebase context)
+    ├── Phase 3.5: Design (ui-architect — optional, for UI/frontend work)
     ├── Phase 4: Generate (check learning store → agents, knowledge, config)
-    ├── Phase 5: Build (dispatch domain agents)
+    ├── Phase 5: Build (dispatch domain + standing agents)
+    ├── Phase 5.5: Test (qa-tester — optional, for deployed web apps)
     ├── Phase 6: Review (quality gate, PASS/FAIL)
     │       └── FAIL → back to Phase 5 (bounded by max_cycles)
     └── Phase 7: Wrap-up (summary, retrospective → learning store)
