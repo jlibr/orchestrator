@@ -137,7 +137,7 @@ Domain agents are the workers that do project-specific tasks.
 
 ### Agent Naming Convention
 
-`{project}-{role}` — e.g., `learntrellis-lesson-author`, `webapp-frontend-dev`
+`{project}-{role}` — e.g., `myapp-lesson-author`, `webapp-frontend-dev`
 
 ## Knowledge Slices
 
